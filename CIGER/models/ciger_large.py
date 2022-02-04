@@ -79,11 +79,11 @@ class CIGERLarge(nn.Module):
         # cell_id_input_dim + pert_idose_input_dim)]
         input_encode = self.encoder(input)
         # input = [batch * num_gene * encode_dim]
-        input_attn, attn = self.attention(input_encode, None)
-        # input_attn = [batch * num_gene * encode_dim]
-        input_attn = input_encode + input_attn
-        # input_attn = [batch * num_gene * (2 * encode_dim)]
-        output = self.decoder(input_attn)
+        # input_attn, attn = self.attention(input_encode, None)
+        # # input_attn = [batch * num_gene * encode_dim]
+        # input_attn = input_encode + input_attn
+        # # input_attn = [batch * num_gene * (2 * encode_dim)]
+        output = self.decoder(input_encode)
         # output = [batch * num_gene * 1]
         if self.label_type == 'binary' or self.label_type == 'binary_reverse':
             out = self.sigmoid(output.squeeze(2))
