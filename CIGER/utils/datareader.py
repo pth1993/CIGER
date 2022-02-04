@@ -1,10 +1,5 @@
 from .data_utils import *
 
-seed = 343
-np.random.seed(seed=seed)
-random.seed(a=seed)
-torch.manual_seed(seed)
-
 
 class DataReader(object):
     def __init__(self, drug_file, pert_id_file, gene_file, data_file, fp_type, device, fold):
@@ -66,9 +61,9 @@ class DataReader(object):
                 output_feature['pert_idose'] = feature['pert_idose'][excerpt]
             output_feature['gene'] = torch.arange(978).repeat(len(output_feature['cell_id'])).\
                 reshape(len(output_feature['cell_id']), 978).to(self.device)
-            output_label['full_real'] = label['full_real'][excerpt]
-            output_label['full_binary_pos'] = label['full_binary_pos'][excerpt]
-            output_label['full_binary_neg'] = label['full_binary_neg'][excerpt]
+            output_label['real'] = label['real'][excerpt]
+            output_label['binary'] = label['binary'][excerpt]
+            output_label['binary_reverse'] = label['binary_reverse'][excerpt]
             yield output_feature, output_label
 
 

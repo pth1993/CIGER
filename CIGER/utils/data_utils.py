@@ -2,9 +2,7 @@ import numpy as np
 import torch
 import csv
 from sklearn.utils import shuffle
-import random
 from .molecules import Molecules
-import collections
 
 
 def read_drug_number(input_file, num_feature):
@@ -289,14 +287,14 @@ def transfrom_to_tensor(feature_train, feature_dev, feature_test, label_train, l
         dev_feature['pert_idose'] = torch.from_numpy(np.asarray(dev_pert_idose_feature, dtype=np.float32)).to(device)
         test_feature['pert_idose'] = torch.from_numpy(np.asarray(test_pert_idose_feature, dtype=np.float32)).to(device)
     
-    train_label['full_real'] = torch.from_numpy(label_train).to(device)
-    dev_label['full_real'] = torch.from_numpy(label_dev).to(device)
-    test_label['full_real'] = torch.from_numpy(label_test).to(device)
-    train_label['full_binary_pos'] = torch.from_numpy(pos_label_train).to(device)
-    dev_label['full_binary_pos'] = torch.from_numpy(pos_label_dev).to(device)
-    test_label['full_binary_pos'] = torch.from_numpy(pos_label_test).to(device)
-    train_label['full_binary_neg'] = torch.from_numpy(neg_label_train).to(device)
-    dev_label['full_binary_neg'] = torch.from_numpy(neg_label_dev).to(device)
-    test_label['full_binary_neg'] = torch.from_numpy(neg_label_test).to(device)
+    train_label['real'] = torch.from_numpy(label_train).to(device)
+    dev_label['real'] = torch.from_numpy(label_dev).to(device)
+    test_label['real'] = torch.from_numpy(label_test).to(device)
+    train_label['binary'] = torch.from_numpy(pos_label_train).to(device)
+    dev_label['binary'] = torch.from_numpy(pos_label_dev).to(device)
+    test_label['binary'] = torch.from_numpy(pos_label_test).to(device)
+    train_label['binary_reverse'] = torch.from_numpy(neg_label_train).to(device)
+    dev_label['binary_reverse'] = torch.from_numpy(neg_label_dev).to(device)
+    test_label['binary_reverse'] = torch.from_numpy(neg_label_test).to(device)
     return train_feature, dev_feature, test_feature, train_label, dev_label, test_label, use_pert_type, use_cell_id, \
            use_pert_idose, len(pert_type_set), len(cell_id_set), len(pert_idose_set)

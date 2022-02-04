@@ -1,10 +1,20 @@
 import os
+import sys
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-from datetime import datetime
+
 import torch
 import numpy as np
+import random
+
+seed = 343
+np.random.seed(seed=seed)
+random.seed(a=seed)
+torch.manual_seed(seed)
+
+from datetime import datetime
 import argparse
+import math
 from tqdm import tqdm
 from models import CIGER
 from utils import DataReader
@@ -13,20 +23,20 @@ from utils import auroc, auprc, precision_k, ndcg, kendall_tau, mean_average_pre
 start_time = datetime.now()
 
 parser = argparse.ArgumentParser(description='DeepCOP Training')
-parser.add_argument('--drug_file')
-parser.add_argument('--drug_id_file')
-parser.add_argument('--gene_file')
-parser.add_argument('--data_file')
-parser.add_argument('--fp_type')
-parser.add_argument('--label_type')
-parser.add_argument('--loss_type')
-parser.add_argument('--batch_size')
-parser.add_argument('--max_epoch')
-parser.add_argument('--lr')
-parser.add_argument('--fold')
-parser.add_argument('--model_name')
-parser.add_argument('--warm_start')
-parser.add_argument('--inference')
+parser.add_argument('--drug_file', help='drug feature file (ECFP or SMILES)')
+parser.add_argument('--drug_id_file', help='drug id file')
+parser.add_argument('--gene_file', help='gene feature file')
+parser.add_argument('--data_file', help='chemical signature file')
+parser.add_argument('--fp_type', help='ECFP or Neural FP')
+parser.add_argument('--label_type', help='real/real reverse/binary/binary reverse')
+parser.add_argument('--loss_type', help='ranknet/listnet/listmle/rankcosine/ndcg')
+parser.add_argument('--batch_size', help='number of training example per update')
+parser.add_argument('--max_epoch', help='total number of training iterations')
+parser.add_argument('--lr', help='learning rate')
+parser.add_argument('--fold', help='id for testing set in cross-validation setting')
+parser.add_argument('--model_name', help='name of model')
+parser.add_argument('--warm_start', help='training from pre-trained model')
+parser.add_argument('--inference', help='inference from pre-trained model')
 
 args = parser.parse_args()
 
@@ -86,19 +96,19 @@ if inference:
                 pert_idose = None
             gene = ft['gene']
             predict = model(drug, gene, pert_type, cell_id, pert_idose)
-            if label_type == 'pos' or label_type == 'raw':
-                label = lb['full_binary_pos']
-            elif label_type == 'neg' or label_type == 'raw_reverse':
-                label = lb['full_binary_neg']
+            if label_type == 'binary' or label_type == 'real':
+                label = lb['binary']
+            elif label_type == 'binary_reverse' or label_type == 'real_reverse':
+                label = lb['binary_reverse']
             else:
                 raise ValueError('Unknown label type: %s' % label_type)
 
-            if label_type == 'pos' or label_type == 'raw':
-                label_binary = lb['full_binary_pos']
-                label_real = lb['full_real']
-            elif label_type == 'neg' or label_type == 'raw_reverse':
-                label_binary = lb['full_binary_neg']
-                label_real = -lb['full_real']
+            if label_type == 'binary' or label_type == 'real':
+                label_binary = lb['binary']
+                label_real = lb['real']
+            elif label_type == 'binary_reverse' or label_type == 'real_reverse':
+                label_binary = lb['binary_reverse']
+                label_real = -lb['real']
             else:
                 raise ValueError('Unknown label type: %s' % label_type)
             label_binary_np = np.concatenate((label_binary_np, label_binary.cpu().numpy()), axis=0)
@@ -147,11 +157,16 @@ else:
     best_dev_ndcg = float("-inf")
     score_list_dev = {'auroc': [], 'auprc': [], 'ndcg': [], 'p10': [], 'p50': [], 'p100': [], 'p200': []}
     score_list_test = {'auroc': [], 'auprc': [], 'ndcg': [], 'p10': [], 'p50': [], 'p100': [], 'p200': []}
+    num_batch_train = math.ceil(len(data.train_feature['drug']) / batch_size)
+    num_batch_dev = math.ceil(len(data.dev_feature['drug']) / batch_size)
+    num_batch_test = math.ceil(len(data.test_feature['drug']) / batch_size)
     for epoch in range(max_epoch):
+        sys.stdout.write("Iteration %d:" % (epoch + 1))
         print("Iteration %d:" % (epoch + 1))
         model.train()
         epoch_loss = 0
-        for i, batch in enumerate(tqdm(data.get_batch_data(dataset='train', batch_size=batch_size, shuffle=True))):
+        for i, batch in enumerate(tqdm(data.get_batch_data(dataset='train', batch_size=batch_size, shuffle=True),
+                                       total=num_batch_train)):
             ft, lb = batch
             drug = ft['drug']
             if data.use_pert_type:
@@ -167,14 +182,14 @@ else:
             else:
                 pert_idose = None
             gene = ft['gene']
-            if label_type == 'pos':
-                label = lb['full_binary_pos']
-            elif label_type == 'neg':
-                label = lb['full_binary_neg']
-            elif label_type == 'raw':
-                label = lb['full_real']
-            elif label_type == 'raw_reverse':
-                label = -lb['full_real']
+            if label_type == 'binary':
+                label = lb['binary']
+            elif label_type == 'binary_reverse':
+                label = lb['binary_reverse']
+            elif label_type == 'real':
+                label = lb['real']
+            elif label_type == 'real_reverse':
+                label = -lb['real']
             else:
                 raise ValueError('Unknown label type: %s' % label_type)
             optimizer.zero_grad()
@@ -193,7 +208,8 @@ else:
         label_real_np = np.empty([0, num_gene])
         predict_np = np.empty([0, num_gene])
         with torch.no_grad():
-            for i, batch in enumerate(tqdm(data.get_batch_data(dataset='dev', batch_size=batch_size, shuffle=False))):
+            for i, batch in enumerate(tqdm(data.get_batch_data(dataset='dev', batch_size=batch_size, shuffle=False),
+                                           total=num_batch_dev)):
                 ft, lb = batch
                 drug = ft['drug']
                 if data.use_pert_type:
@@ -210,19 +226,19 @@ else:
                     pert_idose = None
                 gene = ft['gene']
                 predict = model(drug, gene, pert_type, cell_id, pert_idose)
-                if label_type == 'pos' or label_type == 'raw':
-                    label = lb['full_binary_pos']
-                elif label_type == 'neg' or label_type == 'raw_reverse':
-                    label = lb['full_binary_neg']
+                if label_type == 'binary' or label_type == 'real':
+                    label = lb['binary']
+                elif label_type == 'binary_reverse' or label_type == 'real_reverse':
+                    label = lb['binary_reverse']
                 else:
                     raise ValueError('Unknown label type: %s' % label_type)
 
-                if label_type == 'pos' or label_type == 'raw':
-                    label_binary = lb['full_binary_pos']
-                    label_real = lb['full_real']
-                elif label_type == 'neg' or label_type == 'raw_reverse':
-                    label_binary = lb['full_binary_neg']
-                    label_real = -lb['full_real']
+                if label_type == 'binary' or label_type == 'real':
+                    label_binary = lb['binary']
+                    label_real = lb['real']
+                elif label_type == 'binary_reverse' or label_type == 'real_reverse':
+                    label_binary = lb['binary_reverse']
+                    label_real = -lb['real']
                 else:
                     raise ValueError('Unknown label type: %s' % label_type)
                 label_binary_np = np.concatenate((label_binary_np, label_binary.cpu().numpy()), axis=0)
@@ -262,7 +278,8 @@ else:
         label_real_np = np.empty([0, num_gene])
         predict_np = np.empty([0, num_gene])
         with torch.no_grad():
-            for i, batch in enumerate(tqdm(data.get_batch_data(dataset='test', batch_size=batch_size, shuffle=False))):
+            for i, batch in enumerate(tqdm(data.get_batch_data(dataset='test', batch_size=batch_size, shuffle=False),
+                                           total=num_batch_test)):
                 ft, lb = batch
                 drug = ft['drug']
                 if data.use_pert_type:
@@ -279,19 +296,19 @@ else:
                     pert_idose = None
                 gene = ft['gene']
                 predict = model(drug, gene, pert_type, cell_id, pert_idose)
-                if label_type == 'pos' or label_type == 'raw':
-                    label = lb['full_binary_pos']
-                elif label_type == 'neg' or label_type == 'raw_reverse':
-                    label = lb['full_binary_neg']
+                if label_type == 'binary' or label_type == 'real':
+                    label = lb['binary']
+                elif label_type == 'binary_reverse' or label_type == 'real_reverse':
+                    label = lb['binary_reverse']
                 else:
                     raise ValueError('Unknown label type: %s' % label_type)
 
-                if label_type == 'pos' or label_type == 'raw':
-                    label_binary = lb['full_binary_pos']
-                    label_real = lb['full_real']
-                elif label_type == 'neg' or label_type == 'raw_reverse':
-                    label_binary = lb['full_binary_neg']
-                    label_real = -lb['full_real']
+                if label_type == 'binary' or label_type == 'real':
+                    label_binary = lb['binary']
+                    label_real = lb['real']
+                elif label_type == 'binary_reverse' or label_type == 'real_reverse':
+                    label_binary = lb['binary_reverse']
+                    label_real = -lb['real']
                 else:
                     raise ValueError('Unknown label type: %s' % label_type)
                 label_binary_np = np.concatenate((label_binary_np, label_binary.cpu().numpy()), axis=0)

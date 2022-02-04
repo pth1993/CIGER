@@ -10,7 +10,7 @@ Code by **Thai-Hoang Pham** at Ohio State University.
 chemical-induced gene expression profiles given molecular structures.
 
 The experimental results show that CIGER significantly outperforms existing methods in both ranking and classification 
-metrics for gene expression prediction task. Furthermore, a new drug screening pipeline based on CIGER is pro-posed to 
+metrics for gene expression prediction task. Furthermore, a new drug screening pipeline based on CIGER is proposed to 
 select potential treatments for pancreatic cancer from the DrugBank database, thereby showing the effectiveness of 
 **CIGER** for phenotypic compound screening of precision drug discovery in practice.
 
@@ -32,13 +32,13 @@ potential treatments for that disease.
 
 ## 4. Installation
 
-**CIGER** depends on Numpy, SciPy, PyTorch (CUDA toolkit if use GPU), scikit-learn, and RDKit.
+**CIGER** depends on Numpy, SciPy, PyTorch (CUDA toolkit if use GPU), scikit-learn, tqdm, and RDKit.
 You must have them installed before using **CIGER**.
 
 The simple way to install them is using conda:
 
 ```sh
-	$ conda install numpy scipy scikit-learn rdkit pytorch
+	$ conda install numpy scipy scikit-learn rdkit pytorch tqdm
 ```
 ## 5. Usage
 
@@ -48,11 +48,19 @@ The datasets used to train **CIGER** are located at folder ``CIGER/data/``
 
 ### 5.2. Training CIGER
 
-The training script for **CIGER** is located at folder ``CIGER/``
+The training script for **CIGER** is located at folder ``CIGER/``. The Python script is ``train.py``. Example of running this script is in ``train.sh``.
 
 ```sh
     $ cd CIGER
     $ bash train.sh
+```
+
+Scripts for pancreatic cancer are located at folder ``CIGER/drug_repurposing/``
+
+```sh
+    $ cd CIGER/drug_repurposing
+    $ python drug_repurposing_precision.py # using precision score
+    $ python drug_repurposing_gsea.py # using enrichment score
 ```
 
 ## 6. Contact

@@ -85,9 +85,9 @@ class CIGER(nn.Module):
         # input_attn = [batch * num_gene * (2 * encode_dim)]
         output = self.decoder(input_attn)
         # output = [batch * num_gene * 1]
-        if self.label_type == 'pos' or self.label_type == 'neg':
+        if self.label_type == 'binary' or self.label_type == 'binary_reverse':
             out = self.sigmoid(output.squeeze(2))
-        elif self.label_type == 'raw' or self.label_type == 'raw_reverse':
+        elif self.label_type == 'real' or self.label_type == 'real_reverse':
             out = output.squeeze(2)
         else:
             raise ValueError('Unknown label_type: %s' % self.label_type)

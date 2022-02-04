@@ -41,7 +41,6 @@ class NeuralFingerprint(nn.Module):
             fingerprint: A tensor variable with shape (batch_size, output_size)
         """
         batch_size = drugs['molecules'].batch_size
-        # fingerprint = torch.zeros(batch_size, self.output_size).to(self.device).double()
         fingerprint = torch.zeros(batch_size, self.output_size, dtype=torch.float32).to(self.device)
         neighbor_by_degree = []
         for degree in self.degree_list:
