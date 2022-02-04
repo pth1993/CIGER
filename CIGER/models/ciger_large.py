@@ -30,7 +30,7 @@ class CIGERLarge(nn.Module):
         self.encode_dim = encode_dim
         self.gene_embed = nn.Embedding(978, gene_input_dim).from_pretrained(gene_embed, freeze=True)
         self.encoder = nn.Sequential(nn.Linear(self.input_dim, 2 * self.encode_dim), nn.ReLU(), nn.Dropout(0.1),
-                                     nn.Linear(2 * self.self.encode_dim, self.encode_dim), nn.ReLU(), nn.Dropout(0.1))
+                                     nn.Linear(2 * self.encode_dim, self.encode_dim), nn.ReLU(), nn.Dropout(0.1))
         self.decoder = nn.Sequential(nn.Linear(self.encode_dim, 128), nn.ReLU(), nn.Dropout(0.1),
                                      nn.Linear(128, 32), nn.ReLU(), nn.Dropout(0.1), nn.Linear(32, 1))
         self.attention = Attention(self.encode_dim, n_layers=1, n_heads=1, pf_dim=self.encode_dim, dropout=0.1,
