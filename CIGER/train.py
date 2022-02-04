@@ -16,7 +16,7 @@ from datetime import datetime
 import argparse
 import math
 from tqdm import tqdm
-from models import CIGER
+from models import CIGER, CIGERLarge
 from utils import DataReader
 from utils import auroc, auprc, precision_k, ndcg, kendall_tau, mean_average_precision
 
@@ -64,12 +64,17 @@ print('#Dev: %d' % len(data.dev_feature['drug']))
 print('#Test: %d' % len(data.test_feature['drug']))
 
 if inference:
-    model = CIGER(drug_input_dim=data.drug_dim, gene_embed=data.gene, gene_input_dim=data.gene.size()[1], encode_dim=128,
+    # model = CIGER(drug_input_dim=data.drug_dim, gene_embed=data.gene, gene_input_dim=data.gene.size()[1], encode_dim=128,
+    #               fp_type=fp_type, loss_type=loss_type, label_type=label_type, device=device, initializer=intitializer,
+    #               pert_type_input_dim=data.pert_type_dim, cell_id_input_dim=data.cell_id_dim,
+    #               pert_idose_input_dim=data.pert_idose_dim, use_pert_type=data.use_pert_type,
+    #               use_cell_id=data.use_cell_id, use_pert_idose=data.use_pert_idose)
+    model = CIGERLarge(drug_input_dim=data.drug_dim, gene_embed=data.gene, gene_input_dim=data.gene.size()[1], encode_dim=256,
                   fp_type=fp_type, loss_type=loss_type, label_type=label_type, device=device, initializer=intitializer,
                   pert_type_input_dim=data.pert_type_dim, cell_id_input_dim=data.cell_id_dim,
                   pert_idose_input_dim=data.pert_idose_dim, use_pert_type=data.use_pert_type,
                   use_cell_id=data.use_cell_id, use_pert_idose=data.use_pert_idose)
-    checkpoint = torch.load('saved_model/ciger/%s_%d.ckpt' % (model_name + '_' + loss_type + '_' + label_type, fold),
+    checkpoint = torch.load('saved_model/ciger_large/%s_%d.ckpt' % (model_name + '_' + loss_type + '_' + label_type, fold),
                             map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.to(device)
@@ -142,7 +147,7 @@ else:
                   use_cell_id=data.use_cell_id, use_pert_idose=data.use_pert_idose)
 
     if warm_start:
-        checkpoint = torch.load('saved_model/ciger/%s_%d.ckpt' % (model_name + '_' + loss_type + '_' + label_type, fold),
+        checkpoint = torch.load('saved_model/ciger_large/%s_%d.ckpt' % (model_name + '_' + loss_type + '_' + label_type, fold),
                                 map_location=device)
         model.load_state_dict(checkpoint['model_state_dict'])
         model.to(device)
@@ -161,7 +166,6 @@ else:
     num_batch_dev = math.ceil(len(data.dev_feature['drug']) / batch_size)
     num_batch_test = math.ceil(len(data.test_feature['drug']) / batch_size)
     for epoch in range(max_epoch):
-        sys.stdout.write("Iteration %d:" % (epoch + 1))
         print("Iteration %d:" % (epoch + 1))
         model.train()
         epoch_loss = 0
@@ -271,7 +275,7 @@ else:
                 best_dev_ndcg = ndcg_score
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()},
-                           'saved_model/ciger/%s_%d.ckpt' % (model_name + '_' + loss_type + '_' + label_type, fold))
+                           'saved_model/ciger_large/%s_%d.ckpt' % (model_name + '_' + loss_type + '_' + label_type, fold))
 
         epoch_loss = 0
         label_binary_np = np.empty([0, num_gene])
