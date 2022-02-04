@@ -4,7 +4,6 @@
 *.pickle
 __pycache__/*
 *.pkl
-*.npy
 *.txt
 *.gz
 *.mat
