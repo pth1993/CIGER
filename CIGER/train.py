@@ -1,7 +1,7 @@
 import os
 import sys
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 import torch
 import numpy as np
