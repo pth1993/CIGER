@@ -1,11 +1,15 @@
 CIGER - Chemical-induced Gene Expression Ranking
 
 
-# CIGER - Chemical-induced Gene Expression Ranking
+# CIGER - Chemical-induced gene expression ranking and its application to pancreatic cancer drug repurposing
 -----------------------------------------------------------------
 Code by **Thai-Hoang Pham** at Ohio State University.
 
 ## 1. Introduction
+This repository contains source code (**CIGER**) and data for paper "[Chemical-induced gene expression ranking and its 
+application to pancreatic cancer drug repurposing](https://www.cell.com/patterns/fulltext/S2666-3899(22)00014-9)" 
+(**Patterns 3 (2022)**)
+
 **CIGER** is a Python implementation of the neural network-based model that predicts the rankings of genes in the whole 
 chemical-induced gene expression profiles given molecular structures.
 
@@ -78,7 +82,13 @@ Scripts for pancreatic cancer are located at folder ``CIGER/drug_repurposing/``
     $ python drug_repurposing_gsea.py # using enrichment score
 ```
 
-## 6. Contact
+## 6. References
+
+[Pham, TH., Qiu, Y., Liu, J. et al. Chemical-induced gene expression ranking and its
+application to pancreatic cancer drug repurposing. Patterns 3, (2022).
+](https://www.cell.com/patterns/fulltext/S2666-3899(22)00014-9)
+
+## 7. Contact
 
 **Thai-Hoang Pham** < pham.375@osu.edu >
 
