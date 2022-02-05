@@ -1,7 +1,6 @@
 import os
-import sys
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
 import numpy as np
@@ -16,7 +15,7 @@ from datetime import datetime
 import argparse
 import math
 from tqdm import tqdm
-from models import CIGER, CIGERLarge
+from models import CIGER
 from utils import DataReader
 from utils import auroc, auprc, precision_k, ndcg, kendall_tau, mean_average_precision
 
@@ -29,7 +28,8 @@ parser.add_argument('--gene_file', help='gene feature file')
 parser.add_argument('--data_file', help='chemical signature file')
 parser.add_argument('--fp_type', help='ECFP or Neural FP')
 parser.add_argument('--label_type', help='real/real reverse/binary/binary reverse')
-parser.add_argument('--loss_type', help='ranknet/listnet/listmle/rankcosine/ndcg')
+parser.add_argument('--loss_type', help='pair_wise_ranknet/list_wise_listnet/list_wise_listmle/list_wise_rankcosine/'
+                                        'list_wise_ndcg')
 parser.add_argument('--batch_size', help='number of training example per update')
 parser.add_argument('--max_epoch', help='total number of training iterations')
 parser.add_argument('--lr', help='learning rate')
@@ -64,17 +64,12 @@ print('#Dev: %d' % len(data.dev_feature['drug']))
 print('#Test: %d' % len(data.test_feature['drug']))
 
 if inference:
-    # model = CIGER(drug_input_dim=data.drug_dim, gene_embed=data.gene, gene_input_dim=data.gene.size()[1], encode_dim=128,
-    #               fp_type=fp_type, loss_type=loss_type, label_type=label_type, device=device, initializer=intitializer,
-    #               pert_type_input_dim=data.pert_type_dim, cell_id_input_dim=data.cell_id_dim,
-    #               pert_idose_input_dim=data.pert_idose_dim, use_pert_type=data.use_pert_type,
-    #               use_cell_id=data.use_cell_id, use_pert_idose=data.use_pert_idose)
-    model = CIGERLarge(drug_input_dim=data.drug_dim, gene_embed=data.gene, gene_input_dim=data.gene.size()[1], encode_dim=512,
-                  fp_type=fp_type, loss_type=loss_type, label_type=label_type, device=device, initializer=intitializer,
-                  pert_type_input_dim=data.pert_type_dim, cell_id_input_dim=data.cell_id_dim,
+    model = CIGER(drug_input_dim=data.drug_dim, gene_embed=data.gene, gene_input_dim=data.gene.size()[1],
+                  encode_dim=512, fp_type=fp_type, loss_type=loss_type, label_type=label_type, device=device,
+                  initializer=intitializer, pert_type_input_dim=data.pert_type_dim, cell_id_input_dim=data.cell_id_dim,
                   pert_idose_input_dim=data.pert_idose_dim, use_pert_type=data.use_pert_type,
                   use_cell_id=data.use_cell_id, use_pert_idose=data.use_pert_idose)
-    checkpoint = torch.load('saved_model/ciger_large/%s_%d.ckpt' % (model_name + '_' + loss_type + '_' + label_type, fold),
+    checkpoint = torch.load('saved_model/ciger/%s_%d.ckpt' % (model_name + '_' + loss_type + '_' + label_type, fold),
                             map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.to(device)
@@ -140,20 +135,15 @@ if inference:
         print('Test Kendall Tau: %.4f' % kendall_tau_score)
         print('Test MAP: %.4f' % map_score)
 else:
-    # model = CIGER(drug_input_dim=data.drug_dim, gene_embed=data.gene, gene_input_dim=data.gene.size()[1],
-    #               encode_dim=128, fp_type=fp_type, loss_type=loss_type, label_type=label_type, device=device,
-    #               initializer=intitializer, pert_type_input_dim=data.pert_type_dim, cell_id_input_dim=data.cell_id_dim,
-    #               pert_idose_input_dim=data.pert_idose_dim, use_pert_type=data.use_pert_type,
-    #               use_cell_id=data.use_cell_id, use_pert_idose=data.use_pert_idose)
-    model = CIGERLarge(drug_input_dim=data.drug_dim, gene_embed=data.gene, gene_input_dim=data.gene.size()[1], encode_dim=512,
-                       fp_type=fp_type, loss_type=loss_type, label_type=label_type, device=device, initializer=intitializer,
-                       pert_type_input_dim=data.pert_type_dim, cell_id_input_dim=data.cell_id_dim,
-                       pert_idose_input_dim=data.pert_idose_dim, use_pert_type=data.use_pert_type,
-                       use_cell_id=data.use_cell_id, use_pert_idose=data.use_pert_idose)
+    model = CIGER(drug_input_dim=data.drug_dim, gene_embed=data.gene, gene_input_dim=data.gene.size()[1],
+                  encode_dim=512, fp_type=fp_type, loss_type=loss_type, label_type=label_type, device=device,
+                  initializer=intitializer, pert_type_input_dim=data.pert_type_dim, cell_id_input_dim=data.cell_id_dim,
+                  pert_idose_input_dim=data.pert_idose_dim, use_pert_type=data.use_pert_type,
+                  use_cell_id=data.use_cell_id, use_pert_idose=data.use_pert_idose)
 
     if warm_start:
-        checkpoint = torch.load('saved_model/ciger_large/%s_%d.ckpt' % (model_name + '_' + loss_type + '_' + label_type, fold),
-                                map_location=device)
+        checkpoint = torch.load('saved_model/ciger/%s_%d.ckpt' % (model_name + '_' + loss_type + '_' + label_type,
+                                                                  fold), map_location=device)
         model.load_state_dict(checkpoint['model_state_dict'])
         model.to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -280,7 +270,7 @@ else:
                 best_dev_ndcg = ndcg_score
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()},
-                           'saved_model/ciger_large/%s_%d.ckpt' % (model_name + '_' + loss_type + '_' + label_type, fold))
+                           'saved_model/ciger/%s_%d.ckpt' % (model_name + '_' + loss_type + '_' + label_type, fold))
 
         epoch_loss = 0
         label_binary_np = np.empty([0, num_gene])
@@ -362,34 +352,36 @@ else:
 
     best_dev_epoch = np.argmax(score_list_dev['ndcg'])
     print("Epoch %d got best ndcg on dev set: %.4f" % (best_dev_epoch + 1, score_list_dev['ndcg'][best_dev_epoch]))
-    print(
-        "Epoch %d got ndcg on test set w.r.t dev set: %.4f" % (best_dev_epoch + 1, score_list_test['ndcg'][best_dev_epoch]))
+    print("Epoch %d got ndcg on test set w.r.t dev set: %.4f" % (best_dev_epoch + 1, score_list_test['ndcg']
+    [best_dev_epoch]))
     best_test_epoch = np.argmax(score_list_test['ndcg'])
     print("Epoch %d got ndcg on test set: %.4f" % (best_test_epoch + 1, score_list_test['ndcg'][best_test_epoch]))
 
     best_dev_epoch = np.argmax(score_list_dev['p10'])
     print("Epoch %d got best p10 on dev set: %.4f" % (best_dev_epoch + 1, score_list_dev['p10'][best_dev_epoch]))
-    print("Epoch %d got p10 on test set w.r.t dev set: %.4f" % (best_dev_epoch + 1, score_list_test['p10'][best_dev_epoch]))
+    print("Epoch %d got p10 on test set w.r.t dev set: %.4f" % (best_dev_epoch + 1, score_list_test['p10']
+    [best_dev_epoch]))
     best_test_epoch = np.argmax(score_list_test['p10'])
     print("Epoch %d got p10 on test set: %.4f" % (best_test_epoch + 1, score_list_test['p10'][best_test_epoch]))
 
     best_dev_epoch = np.argmax(score_list_dev['p50'])
     print("Epoch %d got best p50 on dev set: %.4f" % (best_dev_epoch + 1, score_list_dev['p50'][best_dev_epoch]))
-    print("Epoch %d got p50 on test set w.r.t dev set: %.4f" % (best_dev_epoch + 1, score_list_test['p50'][best_dev_epoch]))
+    print("Epoch %d got p50 on test set w.r.t dev set: %.4f" % (best_dev_epoch + 1, score_list_test['p50']
+    [best_dev_epoch]))
     best_test_epoch = np.argmax(score_list_test['p50'])
     print("Epoch %d got p50 on test set: %.4f" % (best_test_epoch + 1, score_list_test['p50'][best_test_epoch]))
 
     best_dev_epoch = np.argmax(score_list_dev['p100'])
     print("Epoch %d got best p100 on dev set: %.4f" % (best_dev_epoch + 1, score_list_dev['p100'][best_dev_epoch]))
-    print(
-        "Epoch %d got p100 on test set w.r.t dev set: %.4f" % (best_dev_epoch + 1, score_list_test['p100'][best_dev_epoch]))
+    print("Epoch %d got p100 on test set w.r.t dev set: %.4f" % (best_dev_epoch + 1, score_list_test['p100']
+    [best_dev_epoch]))
     best_test_epoch = np.argmax(score_list_test['p100'])
     print("Epoch %d got p100 on test set: %.4f" % (best_test_epoch + 1, score_list_test['p100'][best_test_epoch]))
 
     best_dev_epoch = np.argmax(score_list_dev['p200'])
     print("Epoch %d got best p200 on dev set: %.4f" % (best_dev_epoch + 1, score_list_dev['p200'][best_dev_epoch]))
-    print(
-        "Epoch %d got p200 on test set w.r.t dev set: %.4f" % (best_dev_epoch + 1, score_list_test['p200'][best_dev_epoch]))
+    print("Epoch %d got p200 on test set w.r.t dev set: %.4f" % (best_dev_epoch + 1, score_list_test['p200']
+    [best_dev_epoch]))
     best_test_epoch = np.argmax(score_list_test['p200'])
     print("Epoch %d got p200 on test set: %.4f" % (best_test_epoch + 1, score_list_test['p200'][best_test_epoch]))
 

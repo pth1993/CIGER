@@ -7,20 +7,20 @@ from .attention import Attention
 
 
 class CIGER(nn.Module):
-    def __init__(self, drug_input_dim, gene_embed, gene_input_dim, encode_dim, fp_type, loss_type, label_type, device, initializer=None,
-                 pert_type_input_dim=None, cell_id_input_dim=None, pert_idose_input_dim=None, use_pert_type=False,
-                 use_cell_id=False, use_pert_idose=False):
+    def __init__(self, drug_input_dim, gene_embed, gene_input_dim, encode_dim, fp_type, loss_type, label_type, device,
+                 initializer=None, pert_type_input_dim=None, cell_id_input_dim=None, pert_idose_input_dim=None,
+                 use_pert_type=False, use_cell_id=False, use_pert_idose=False):
         super(CIGER, self).__init__()
         self.fp_type = fp_type
         self.use_pert_type = use_pert_type
         self.use_cell_id = use_cell_id
         self.use_pert_idose = use_pert_idose
         if self.fp_type == 'neural':
-            self.input_dim = 128 + 128
+            self.input_dim = 1024 + gene_input_dim
             self.drug_fp = NeuralFingerprint(drug_input_dim['atom'], drug_input_dim['bond'], conv_layer_sizes=[64, 64],
-                                             output_size=128, degree_list=[0, 1, 2, 3, 4, 5], device=device)
+                                             output_size=1024, degree_list=[0, 1, 2, 3, 4, 5], device=device)
         else:
-            self.input_dim = drug_input_dim + 128
+            self.input_dim = drug_input_dim + gene_input_dim
         if self.use_pert_type:
             self.input_dim += pert_type_input_dim
         if self.use_cell_id:
@@ -28,10 +28,10 @@ class CIGER(nn.Module):
         if self.use_pert_idose:
             self.input_dim += pert_idose_input_dim
         self.encode_dim = encode_dim
-        self.gene_embed = nn.Sequential(nn.Embedding(978, gene_input_dim).from_pretrained(gene_embed, freeze=True),
-                                        nn.Linear(gene_input_dim, 128))
-        self.encoder = nn.Sequential(nn.Linear(self.input_dim, self.encode_dim), nn.ReLU())
-        self.decoder = nn.Sequential(nn.Linear(2 * self.encode_dim, 128), nn.ReLU(), nn.Dropout(0.1),
+        self.gene_embed = nn.Embedding(978, gene_input_dim).from_pretrained(gene_embed, freeze=True)
+        self.encoder = nn.Sequential(nn.Linear(self.input_dim, 2 * self.encode_dim), nn.ReLU(), nn.Dropout(0.1),
+                                     nn.Linear(2 * self.encode_dim, self.encode_dim), nn.ReLU(), nn.Dropout(0.1))
+        self.decoder = nn.Sequential(nn.Linear(self.encode_dim, 128), nn.ReLU(), nn.Dropout(0.1),
                                      nn.Linear(128, 32), nn.ReLU(), nn.Dropout(0.1), nn.Linear(32, 1))
         self.attention = Attention(self.encode_dim, n_layers=1, n_heads=1, pf_dim=self.encode_dim, dropout=0.1,
                                    device=device)
@@ -81,8 +81,8 @@ class CIGER(nn.Module):
         # input = [batch * num_gene * encode_dim]
         input_attn, attn = self.attention(input_encode, None)
         # input_attn = [batch * num_gene * encode_dim]
-        input_attn = torch.cat([input_encode, input_attn], dim=-1)
-        # input_attn = [batch * num_gene * (2 * encode_dim)]
+        input_attn = input_encode + input_attn
+        # input_attn = [batch * num_gene * encode_dim]
         output = self.decoder(input_attn)
         # output = [batch * num_gene * 1]
         if self.label_type == 'binary' or self.label_type == 'binary_reverse':

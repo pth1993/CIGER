@@ -48,12 +48,27 @@ The datasets used to train **CIGER** are located at folder ``CIGER/data/``
 
 ### 5.2. Training CIGER
 
-The training script for **CIGER** is located at folder ``CIGER/``. The Python script is ``train.py``. Example of running this script is in ``train.sh``.
+The training script for **CIGER** is located at folder ``CIGER/``. The Python script is ``train.py``. Example of 
+running this script is in ``train.sh``.
 
 ```sh
     $ cd CIGER
     $ bash train.sh
 ```
+
+Important Arguments:
+
+``--fp_type``: Chemical representation method. Select between ECFP and neural FP.
+
+``--label_type``: Gene expression label used for training. Select from **real**, **real reverse**, **binary**, 
+and **binary reverse**. **real**: Training with gene expression values (z-scores). **real reverse**: Training with 
+reversed gene expression values. **binary**: gene expression values are converted to binary values with top 95th 
+percentile values as positive label. *binary_reverse*: gene expression values are converted to binary values with 
+bottom 5th percentile values as positive label.
+
+``--loss_type``: Learning-to-rank objective function. Select from **pairwise_ranknet**, **list_wise_listnet**, 
+**list_wise_listmle**, **list_wise_rankcosine**, **list_wise_ndcg**.
+
 
 Scripts for pancreatic cancer are located at folder ``CIGER/drug_repurposing/``
 
